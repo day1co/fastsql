@@ -1,4 +1,4 @@
-import { SQL } from './sql';
+import { SQL, encodeValue, encodeIdentifier, encodeLiteral } from './sql';
 
 describe('sql', () => {
   describe('SQL', () => {
@@ -51,6 +51,61 @@ describe('sql', () => {
       expect(SQL`SELECT * FROM ${table} WHERE name in ${name} AND age in ${age} AND birth in ${birth}`).toBe(
         'SELECT * FROM `table` WHERE name in ("foo","bar","baz","qux") AND age in (10,20,30) AND birth in ("1973-06-12 12:34:56","1983-06-12 12:34:56",CURRENT_TIMESTAMP)'
       );
+    });
+  });
+  describe('encodeValue', () => {
+    it('should convert symbol to identifier string', () => {
+      expect(encodeValue(Symbol.for('hello'))).toBe('`hello`');
+    });
+    it('should convert function to raw string', () => {
+      expect(encodeValue(() => 'CURRENT_TIMESTAMP')).toBe('CURRENT_TIMESTAMP');
+    });
+    it('should convert others to literal string', () => {
+      expect(encodeLiteral(null)).toBe('NULL');
+      expect(encodeLiteral(undefined)).toBe('NULL');
+      expect(encodeLiteral(Number.NaN)).toBe('NULL');
+      expect(encodeLiteral(Number.POSITIVE_INFINITY)).toBe('NULL');
+      expect(encodeLiteral(Number.NEGATIVE_INFINITY)).toBe('NULL');
+      expect(encodeLiteral('hello')).toBe('"hello"');
+      expect(encodeLiteral('he"llo')).toBe('"he\\"llo"');
+      expect(encodeLiteral('he""llo')).toBe('"he\\"\\"llo"');
+      expect(encodeLiteral('')).toBe('""');
+      expect(encodeValue(123)).toBe('123');
+      expect(encodeValue(123.456)).toBe('123.456');
+      expect(encodeValue(true)).toBe('TRUE');
+      expect(encodeValue(false)).toBe('FALSE');
+      expect(encodeLiteral(new Date('1973-06-12T12:34:56.789Z'))).toBe('"1973-06-12 12:34:56"');
+    });
+  });
+  describe('encodeIdentifier', () => {
+    it('should enclose with backtick', () => {
+      expect(encodeIdentifier('hello')).toBe('`hello`');
+    });
+  });
+  describe('encodeLiteral', () => {
+    it('should convert nullish to NULL', () => {
+      expect(encodeLiteral(null)).toBe('NULL');
+      expect(encodeLiteral(undefined)).toBe('NULL');
+      expect(encodeLiteral(Number.NaN)).toBe('NULL');
+      expect(encodeLiteral(Number.POSITIVE_INFINITY)).toBe('NULL');
+      expect(encodeLiteral(Number.NEGATIVE_INFINITY)).toBe('NULL');
+    });
+    it('should convert string to double-quote enclosed string', () => {
+      expect(encodeLiteral('hello')).toBe('"hello"');
+      expect(encodeLiteral('he"llo')).toBe('"he\\"llo"');
+      expect(encodeLiteral('he""llo')).toBe('"he\\"\\"llo"');
+      expect(encodeLiteral('')).toBe('""');
+    });
+    it('should convert number to string', () => {
+      expect(encodeLiteral(123)).toBe('123');
+      expect(encodeLiteral(123.456)).toBe('123.456');
+    });
+    it('should convert boolean to uppcased string', () => {
+      expect(encodeLiteral(true)).toBe('TRUE');
+      expect(encodeLiteral(false)).toBe('FALSE');
+    });
+    it('should convert Date to SQL datetime string', () => {
+      expect(encodeLiteral(new Date('1973-06-12T12:34:56.789Z'))).toBe('"1973-06-12 12:34:56"');
     });
   });
 });

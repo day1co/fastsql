@@ -8,21 +8,21 @@ fast and simple sql builder
 ## Getting Started
 
 ```js
-import { SQL } from '@day1co/fastsql';
+import { SQL, TABLE, COLUMN, RAW } from '@day1co/fastsql';
 
 const table = 'comment';
 const postId = 123;
 const monthBefore = 1;
-const since = () => `DATE_SUB(CURRENT_TIMESTAMP, INTERAVAL ${monthBefore} MONTH)`
+const since = `DATE_SUB(CURRENT_TIMESTAMP, INTERAVAL ${monthBefore} MONTH)`;
 const sort = 'likes';
 
 console.log(SQL`
-SELECT * FROM ${Symbol.for(table)}
+SELECT * FROM ${TABLE(table)}
 WHERE
   post_id = ${postId} AND
-  created_at > ${since}
+  created_at > ${RAW(since)}
 ORDER BY
-  ${Symbol.for(sort)}
+  ${COLUMN(sort)}
 `);
 // expected:
 // SELECT * FROM `table`

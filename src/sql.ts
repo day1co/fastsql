@@ -11,18 +11,9 @@ export function SQL(strings: ReadonlyArray<string>, ...values: Array<unknown>): 
 export function encodeValue(value: unknown): string {
   switch (typeof value) {
     case 'symbol':
-      try {
-        const identifier = Symbol.keyFor(value as symbol) as string;
-        return encodeIdentifier(identifier);
-      } catch (e: unknown) {
-        throw new TypeError(`invalid identifier symbol: ${String(value)}`);
-      }
+      return encodeIdentifier(Symbol.keyFor(value as symbol) as string);
     case 'function':
-      try {
-        return (value as Function)();
-      } catch (e: unknown) {
-        throw new TypeError(`invalid raw value: ${String(value)}`);
-      }
+      return encodeRaw((value as Function)());
     default:
       return encodeLiteral(value);
   }
@@ -35,12 +26,20 @@ export function encodeIdentifier(identifier: string): string {
 export function encodeLiteral(literal: unknown): string {
   switch (typeof literal) {
     case 'string':
-      return '"' + literal.replace('"', '""') + '"';
+      return '"' + literal.replaceAll('"', '\\"') + '"';
     case 'function':
       return (literal as Function)();
     case 'number':
+      if (Number.isNaN(literal) || !Number.isFinite(literal)) {
+        return 'NULL';
+      }
       return String(literal);
+    case 'boolean':
+      return literal ? 'TRUE' : 'FALSE';
     default:
+      if (literal === null || literal === undefined) {
+        return 'NULL';
+      }
       if (Array.isArray(literal)) {
         return '(' + (literal as Array<unknown>).map(encodeLiteral).join(',') + ')';
       }
@@ -51,3 +50,11 @@ export function encodeLiteral(literal: unknown): string {
       throw new TypeError(`unsupported literal type: ${typeof literal}`);
   }
 }
+
+export function encodeRaw(raw: string): string {
+  return raw;
+}
+
+export const TABLE = encodeIdentifier;
+export const COLUMN = encodeIdentifier;
+export const RAW = encodeRaw;
